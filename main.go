@@ -51,6 +51,18 @@ var (
 			Value:       6,
 			Description: "Ignore the effects of a card you draw.",
 		},
+		Card{
+			Name:        "Automated Buck Passer",
+			Type:        Item,
+			Value:       4,
+			Description: "Skip your turn.",
+		},
+		Card{
+			Name:        "Next Door Over",
+			Type:        Item,
+			Value:       5,
+			Description: "Take the top card on the deck and put it on the bottom.",
+		},
 	}
 	monsterNames = []string{
 		"Grid Bug",
@@ -59,6 +71,17 @@ var (
 		"Lesser Child",
 		"Dark Lord",
 		"Chosen King",
+		"Angry Baby",
+		"Elder Prince",
+		"Night Priest",
+		"King of Insects",
+	}
+	escapes = []string{
+		"Rope",
+		"Dinner Time",
+		"Dip",
+		"Skateboard Away",
+		"Running Car",
 	}
 )
 
@@ -74,7 +97,12 @@ type CardType int
 const (
 	Item CardType = iota
 	Monster
+	Escape
 )
+
+func (f CardType) String() string {
+	return [...]string{"Item", "Monster", "Escape"}[f]
+}
 
 var (
 	red    = ParseHexColor("#C55439")
@@ -105,11 +133,9 @@ var (
 func main() {
 	templateSize := scale * 640
 	templateImage := image.NewRGBA(image.Rect(0, 0, templateSize, templateSize))
-	for i, card := range items {
-		err := drawCard(card, templateImage, i)
-		if err != nil {
-			fmt.Println(err)
-		}
+	cards := []Card{}
+	for _, card := range items {
+		cards = append(cards, card)
 	}
 	for i, name := range monsterNames {
 		monster := Card{
@@ -117,7 +143,18 @@ func main() {
 			Value: i,
 			Name:  name,
 		}
-		err := drawCard(monster, templateImage, i+len(items))
+		cards = append(cards, monster)
+	}
+	for i, name := range escapes {
+		escape := Card{
+			Type:  Escape,
+			Value: i,
+			Name:  name,
+		}
+		cards = append(cards, escape)
+	}
+	for i, card := range cards {
+		err := drawCard(card, templateImage, i)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -143,7 +180,8 @@ func drawCard(card Card, templateImage *image.RGBA, i int) error {
 		bgColor = red
 	case Item:
 		bgColor = blue
-
+	case Escape:
+		bgColor = purple
 	}
 
 	draw.Draw(cardImage, cardImage.Bounds(), &image.Uniform{bgColor}, image.ZP, draw.Src)
@@ -170,6 +208,9 @@ func drawCard(card Card, templateImage *image.RGBA, i int) error {
 
 	drawText(card.Name, robotoBold, cardImage, 10, 15, scale*20)
 	drawText(card.Description, robotoRegular, cardImage, 10, 50, scale*18)
+	valueString := fmt.Sprintf("Worth %d Gold", card.Value)
+	drawText(valueString, robotoRegular, cardImage, 10, 150, scale*16)
+	drawText(card.Type.String(), robotoRegular, cardImage, 10, 175, scale*18)
 
 	file, err := os.Create(cardFilename)
 	if err != nil {
@@ -177,8 +218,8 @@ func drawCard(card Card, templateImage *image.RGBA, i int) error {
 	}
 	png.Encode(file, cardImage)
 
-	y := (i / 10) * 200
-	x := (i % 10) * 120
+	y := (i / 10) * 182
+	x := (i % 10) * 126
 
 	r := image.Rect(x, y, x+126, y+182)
 
