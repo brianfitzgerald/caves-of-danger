@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/golang/freetype/truetype"
+	wordwrap "github.com/mitchellh/go-wordwrap"
 	"golang.org/x/image/font"
 
 	"github.com/golang/freetype"
@@ -19,43 +20,52 @@ import (
 )
 
 var (
-	cards = []Card{
+	items = []Card{
 		Card{
-			Name:        "Grid Demon",
-			Type:        Monster,
-			Description: "Sacrifice a card.",
-		},
-		Card{
-			Name:        "Hell Beast",
-			Type:        Monster,
-			Description: "Convert a Disciple.",
-		},
-		Card{
-			Name:        "Worm King",
-			Type:        Monster,
-			Description: "Steal a cone.",
-		},
-		Card{
-			Name:        "Grid Bug",
-			Type:        Monster,
-			Description: "Draw a card.",
-		},
-		Card{
-			Name:        "Lesser Child",
-			Type:        Monster,
-			Description: "Find a treasure.",
-		},
-		Card{
-			Name:        "Amulet of Beauty",
+			Name:        "Amulet of Sight",
 			Type:        Item,
-			Description: "Run.",
+			Value:       2,
+			Description: "Look 3 cards into the deck.",
 		},
+		Card{
+			Name:        "Double or Nothing",
+			Type:        Item,
+			Value:       3,
+			Description: "Double value of this card if you escape.",
+		},
+		Card{
+			Name:        "Left Bamboozle",
+			Type:        Item,
+			Value:       5,
+			Description: "The player on your left must draw.",
+		},
+		Card{
+			Name:        "Right Bamboozle",
+			Type:        Item,
+			Value:       4,
+			Description: "The player on your right must draw.",
+		},
+		Card{
+			Name:        "Bliss",
+			Type:        Item,
+			Value:       6,
+			Description: "Ignore the effects of a card you draw.",
+		},
+	}
+	monsterNames = []string{
+		"Grid Bug",
+		"Hell Beast",
+		"Worm King",
+		"Lesser Child",
+		"Dark Lord",
+		"Chosen King",
 	}
 )
 
 type Card struct {
 	Name        string
 	Type        CardType
+	Value       int
 	Description string
 }
 
@@ -95,8 +105,19 @@ var (
 func main() {
 	templateSize := scale * 640
 	templateImage := image.NewRGBA(image.Rect(0, 0, templateSize, templateSize))
-	for i, card := range cards {
+	for i, card := range items {
 		err := drawCard(card, templateImage, i)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
+	for i, name := range monsterNames {
+		monster := Card{
+			Type:  Monster,
+			Value: i,
+			Name:  name,
+		}
+		err := drawCard(monster, templateImage, i+len(items))
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -147,8 +168,8 @@ func drawCard(card Card, templateImage *image.RGBA, i int) error {
 		return err
 	}
 
-	drawText(card.Name, robotoBold, cardImage, 10, 0, scale*20)
-	drawText(card.Description, robotoRegular, cardImage, 10, 100, scale*18)
+	drawText(card.Name, robotoBold, cardImage, 10, 15, scale*20)
+	drawText(card.Description, robotoRegular, cardImage, 10, 50, scale*18)
 
 	file, err := os.Create(cardFilename)
 	if err != nil {
@@ -156,8 +177,8 @@ func drawCard(card Card, templateImage *image.RGBA, i int) error {
 	}
 	png.Encode(file, cardImage)
 
-	x := i * 126
-	y := (i / 10) * 182
+	y := (i / 10) * 200
+	x := (i % 10) * 120
 
 	r := image.Rect(x, y, x+126, y+182)
 
@@ -177,8 +198,14 @@ func drawText(text string, f *truetype.Font, src *image.RGBA, x, y int, size int
 	c.SetSrc(fg)
 	c.SetHinting(font.HintingFull)
 
-	pt := freetype.Pt(x, y+int(c.PointToFixed(float64(size))>>6))
+	lineWidth := 15
 
-	c.DrawString(text, pt)
+	wrapped := wordwrap.WrapString(text, uint(lineWidth))
+	splitText := strings.Split(wrapped, "\n")
+
+	for i, s := range splitText {
+		pt := freetype.Pt(x, y+(int(c.PointToFixed(float64(size))>>6)*i))
+		c.DrawString(s, pt)
+	}
 
 }
