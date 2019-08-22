@@ -127,7 +127,7 @@ var (
 	spacing          = flag.Float64("spacing", 1.5, "line spacing (e.g. 2 means double spaced)")
 	wonb             = flag.Bool("whiteonblack", false, "white text on a black background")
 	dpi              = flag.Float64("dpi", 22, "screen resolution in Dots Per Inch")
-	scale            = 2
+	scale            = 10
 )
 
 func main() {
@@ -206,11 +206,11 @@ func drawCard(card Card, templateImage *image.RGBA, i int) error {
 		return err
 	}
 
-	drawText(card.Name, robotoBold, cardImage, 10, 15, scale*20)
-	drawText(card.Description, robotoRegular, cardImage, 10, 50, scale*18)
+	drawText(card.Name, robotoBold, cardImage, 10, 15, 20)
+	drawText(card.Description, robotoRegular, cardImage, 10, 50, 18)
 	valueString := fmt.Sprintf("Worth %d Gold", card.Value)
-	drawText(valueString, robotoRegular, cardImage, 10, 150, scale*16)
-	drawText(card.Type.String(), robotoRegular, cardImage, 10, 175, scale*18)
+	drawText(valueString, robotoRegular, cardImage, 10, 150, 16)
+	drawText(card.Type.String(), robotoRegular, cardImage, 10, 175, 18)
 
 	file, err := os.Create(cardFilename)
 	if err != nil {
@@ -218,10 +218,10 @@ func drawCard(card Card, templateImage *image.RGBA, i int) error {
 	}
 	png.Encode(file, cardImage)
 
-	y := (i / 10) * 182
-	x := (i % 10) * 126
+	y := (i / 10) * 182 * scale / 2
+	x := (i % 10) * 126 * scale / 2
 
-	r := image.Rect(x, y, x+126, y+182)
+	r := image.Rect(x, y, x+(126*scale), y+(182*scale))
 
 	draw.Draw(templateImage, r, cardImage, image.ZP, draw.Src)
 
@@ -229,6 +229,11 @@ func drawCard(card Card, templateImage *image.RGBA, i int) error {
 }
 
 func drawText(text string, f *truetype.Font, src *image.RGBA, x, y int, size int) {
+
+	y = y * scale
+	x = x * scale
+	size = size * scale
+
 	fg := &image.Uniform{color.White}
 	c := freetype.NewContext()
 	c.SetDPI(*dpi)
