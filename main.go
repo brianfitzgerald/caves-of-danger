@@ -26,7 +26,7 @@ var (
 		Card{
 			Name:        "Amulet of Sight",
 			Type:        Item,
-			Value:       2,
+			Value:       3,
 			Description: "Look 3 cards into the deck.",
 		},
 		Card{
@@ -71,6 +71,13 @@ var (
 			Value:        5,
 			NumberInDeck: 2,
 			Description:  "Take the top card on the deck and put it on the bottom.",
+		},
+		Card{
+			Name:         "Swipe",
+			Type:         Item,
+			Value:        5,
+			NumberInDeck: 2,
+			Description:  "Steal a card from another player. You get to choose the card.",
 		},
 	}
 	monsterNames = []string{
@@ -253,9 +260,9 @@ func printDeck() {
 
 var (
 	escapesPerRound      = 3
-	monstersPerRound     = 5
+	monstersPerRound     = 6
 	itemsPerRound        = 4
-	uselessItemsPerRound = 6
+	uselessItemsPerRound = 5
 	numRounds            = 3
 	startingCards        = 3
 	numPlayers           = 3
@@ -279,16 +286,25 @@ func generateDeck() []Card {
 	}
 	for i := 0; i < monstersPerRound*numRounds; i++ {
 		name := monsterNames[rand.Intn(len(monsterNames))]
-		desc := "Sacrifice any Item to defeat this monster."
+		desc := "Sacrifice any 2 Items to defeat."
 		if rand.Intn(5) >= 4 {
-			desc = "Sacrifice any non-Useless Item to defeat this monster."
+			desc = "Sacrifice any non-Useless Item to defeat."
 		}
 		if rand.Intn(5) >= 4 {
-			desc = "Sacrifice any 2 Items to defeat this monster."
+			desc = "Sacrifice 10 Gold worth of Items to defeat."
+		}
+		if rand.Intn(5) >= 4 {
+			desc = "Sacrifice any 3 Items to defeat."
+		}
+		if rand.Intn(5) >= 4 {
+			desc = "Sacrifice any 3 Items to defeat."
+		}
+		if rand.Intn(5) >= 4 {
+			desc = "Sacrifice a Useless Item to defeat."
 		}
 		monster := Card{
 			Type:        Monster,
-			Value:       i,
+			Value:       i * 2,
 			Name:        name,
 			Description: desc,
 		}
