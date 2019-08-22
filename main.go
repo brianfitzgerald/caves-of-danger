@@ -170,12 +170,34 @@ var (
 	spacing          = flag.Float64("spacing", 1.5, "line spacing (e.g. 2 means double spaced)")
 	wonb             = flag.Bool("whiteonblack", false, "white text on a black background")
 	dpi              = flag.Float64("dpi", 22, "screen resolution in Dots Per Inch")
-	scale            = 10
+	scale            = 2
+	cardsPerRow      = 10
+	printType        = TabletopSim
+)
+
+type PrintDocumentType int
+
+const (
+	TabletopSim PrintDocumentType = iota
+	A4
 )
 
 func main() {
-	templateSize := scale * 640
-	templateImage := image.NewRGBA(image.Rect(0, 0, templateSize, templateSize))
+
+	if len(os.Args) > 1 && os.Args[1] == "A4" {
+		printType = A4
+	}
+
+	templateWidth := scale * 640
+	templateHeight := scale * 640
+
+	if printType == A4 {
+		templateWidth = 2480 * 1
+		templateHeight = 3508 * 1
+		scale = 5
+	}
+
+	templateImage := image.NewRGBA(image.Rect(0, 0, templateWidth, templateHeight))
 	cards := generateDeck()
 	for i, card := range cards {
 		err := drawCard(card, templateImage, i)
@@ -195,7 +217,7 @@ var (
 	escapesPerRound      = 3
 	monstersPerRound     = 5
 	itemsPerRound        = 4
-	uselessItemsPerRound = 4
+	uselessItemsPerRound = 6
 	numRounds            = 3
 	startingCards        = 3
 	numPlayers           = 3
@@ -276,7 +298,18 @@ func drawCard(card Card, templateImage *image.RGBA, i int) error {
 		bgColor = purple
 	}
 
-	draw.Draw(cardImage, cardImage.Bounds(), &image.Uniform{bgColor}, image.ZP, draw.Src)
+	textColor := color.Color(color.White)
+
+	if printType == A4 {
+		textColor = bgColor
+		bgColor = color.White
+	}
+
+	innerBounds := cardImage.Bounds()
+	innerBounds = innerBounds.Inset(2)
+
+	draw.Draw(cardImage, cardImage.Bounds(), &image.Uniform{color.Black}, image.ZP, draw.Src)
+	draw.Draw(cardImage, innerBounds, &image.Uniform{bgColor}, image.ZP, draw.Src)
 
 	fontBytes, err := ioutil.ReadFile(robotoBoldSrc)
 	if err != nil {
@@ -300,11 +333,11 @@ func drawCard(card Card, templateImage *image.RGBA, i int) error {
 
 	leftMargin := 5
 
-	drawText(card.Name, robotoBold, cardImage, leftMargin, 10, 20)
-	drawText(card.Description, robotoRegular, cardImage, leftMargin, 40, 18)
+	drawText(card.Name, robotoBold, cardImage, leftMargin, 10, 20, textColor)
+	drawText(card.Description, robotoRegular, cardImage, leftMargin, 40, 18, textColor)
 	valueString := fmt.Sprintf("Worth %d Gold", card.Value)
-	drawText(valueString, robotoRegular, cardImage, leftMargin, 82, 16)
-	drawText(card.Type.String(), robotoRegular, cardImage, leftMargin, 25, 18)
+	drawText(valueString, robotoRegular, cardImage, leftMargin, 82, 16, textColor)
+	drawText(card.Type.String(), robotoRegular, cardImage, leftMargin, 25, 18, textColor)
 
 	file, err := os.Create(cardFilename)
 	if err != nil {
@@ -312,8 +345,8 @@ func drawCard(card Card, templateImage *image.RGBA, i int) error {
 	}
 	png.Encode(file, cardImage)
 
-	y := (i / 10) * 182 * scale / 2
-	x := (i % 10) * 126 * scale / 2
+	y := (i / cardsPerRow) * 182 * scale / 2
+	x := (i % cardsPerRow) * 126 * scale / 2
 
 	r := image.Rect(x, y, x+(126*scale), y+(182*scale))
 
@@ -322,13 +355,13 @@ func drawCard(card Card, templateImage *image.RGBA, i int) error {
 	return nil
 }
 
-func drawText(text string, f *truetype.Font, src *image.RGBA, x, y int, size int) {
+func drawText(text string, f *truetype.Font, src *image.RGBA, x, y int, size int, textColor color.Color) {
 
 	y = y * scale
 	x = x * scale
 	size = size * scale
 
-	fg := &image.Uniform{color.White}
+	fg := &image.Uniform{textColor}
 	c := freetype.NewContext()
 	c.SetDPI(*dpi)
 	c.SetFont(f)
