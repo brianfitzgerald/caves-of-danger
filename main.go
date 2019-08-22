@@ -51,7 +51,7 @@ var (
 			Name:        "Bliss",
 			Type:        Item,
 			Value:       6,
-			Description: "Ignore the effects of a card you draw.",
+			Description: "Ignore the effects of a card you drew.",
 		},
 		Card{
 			Name:        "Automated Buck Passer",
@@ -105,7 +105,7 @@ var (
 		},
 		EscapeDesc{
 			Name:      "Dinner Time",
-			Condition: "Wait until your turn is skipped.",
+			Condition: "Wait until you have 5 cards in your hand.",
 		},
 		EscapeDesc{
 			Name:      "Dip",
@@ -173,6 +173,7 @@ var (
 	scale            = 2
 	cardsPerRow      = 10
 	printType        = TabletopSim
+	rowsPerPage      = 6
 )
 
 type PrintDocumentType int
@@ -184,7 +185,33 @@ const (
 
 func main() {
 
-	if len(os.Args) > 1 && os.Args[1] == "A4" {
+	if len(os.Args) > 1 {
+		if os.Args[1] == "deck" {
+			testDeck()
+		}
+		if os.Args[1] == "print" {
+			printDeck()
+		}
+	}
+
+}
+
+func testDeck() {
+	cards := generateDeck()
+	r := rand.New(rand.NewSource(time.Now().Unix()))
+	shuffled := []Card{}
+	for _, i := range r.Perm(len(cards)) {
+		val := cards[i]
+		shuffled = append(shuffled, val)
+	}
+
+	for _, card := range shuffled {
+		fmt.Println(card.Type.String(), card.Name, card.Description, card.Value)
+	}
+}
+
+func printDeck() {
+	if len(os.Args) > 2 && os.Args[2] == "A4" {
 		printType = A4
 	}
 
@@ -194,22 +221,33 @@ func main() {
 	if printType == A4 {
 		templateWidth = 2480 * 1
 		templateHeight = 3508 * 1
-		scale = 5
+		scale = 8
 	}
 
-	templateImage := image.NewRGBA(image.Rect(0, 0, templateWidth, templateHeight))
 	cards := generateDeck()
-	for i, card := range cards {
-		err := drawCard(card, templateImage, i)
+
+	cardsPerPage := 40
+	numPages := 2
+
+	for i := 0; i < numPages; i++ {
+		templateImage := image.NewRGBA(image.Rect(0, 0, templateWidth, templateHeight))
+		end := i*cardsPerPage + cardsPerPage
+		if i == numPages-1 {
+			end = len(cards)
+		}
+		for i, card := range cards[i*cardsPerPage : end] {
+			err := drawCard(card, templateImage, i)
+			if err != nil {
+				fmt.Println(err)
+			}
+		}
+		file, err := os.Create(fmt.Sprintf("exports/all_cards_page_%d.png", i+1))
 		if err != nil {
 			fmt.Println(err)
 		}
+		png.Encode(file, templateImage)
+
 	}
-	file, err := os.Create("exports/all_cards.png")
-	if err != nil {
-		fmt.Println(err)
-	}
-	png.Encode(file, templateImage)
 
 }
 
