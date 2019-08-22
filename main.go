@@ -8,8 +8,10 @@ import (
 	"image/draw"
 	"image/png"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/golang/freetype/truetype"
 	wordwrap "github.com/mitchellh/go-wordwrap"
@@ -31,19 +33,19 @@ var (
 			Name:        "Double or Nothing",
 			Type:        Item,
 			Value:       3,
-			Description: "Double value of this card if you escape.",
+			Description: "Double the value of this card if you escaped this round.",
 		},
 		Card{
 			Name:        "Left Bamboozle",
 			Type:        Item,
 			Value:       5,
-			Description: "The player on your left must draw.",
+			Description: "Skip your turn, the player on your left keeps this card and has to draw 2 on their turn.",
 		},
 		Card{
 			Name:        "Right Bamboozle",
 			Type:        Item,
 			Value:       4,
-			Description: "The player on your right must draw.",
+			Description: "Skip your turn, the player on your right keeps this card and has to draw 2 on their turn.",
 		},
 		Card{
 			Name:        "Bliss",
@@ -63,6 +65,13 @@ var (
 			Value:       5,
 			Description: "Take the top card on the deck and put it on the bottom.",
 		},
+		Card{
+			Name:         "Next Door Over",
+			Type:         Item,
+			Value:        5,
+			NumberInDeck: 2,
+			Description:  "Take the top card on the deck and put it on the bottom.",
+		},
 	}
 	monsterNames = []string{
 		"Grid Bug",
@@ -71,25 +80,59 @@ var (
 		"Lesser Child",
 		"Dark Lord",
 		"Chosen King",
-		"Angry Baby",
 		"Elder Prince",
 		"Night Priest",
-		"King of Insects",
+		"Big Snake",
+		"Cursed Rod",
+		"Glass Dragon",
+		"Bush Baby",
+		"Oaf",
+		"Spoon Lord",
 	}
-	escapes = []string{
-		"Rope",
-		"Dinner Time",
-		"Dip",
-		"Skateboard Away",
-		"Running Car",
+	uselessItems = []string{
+		"Golden Horn",
+		"Decently Used Coat",
+		"Working Radio",
+		"Spotless Hubcaps",
+		"Tylenol",
+		"Radio Goggles",
+		"Deodorant Jar",
+	}
+	escapes = []EscapeDesc{
+		EscapeDesc{
+			Name:      "Rope",
+			Condition: "Wait until 3 Monsters are killed this round.",
+		},
+		EscapeDesc{
+			Name:      "Dinner Time",
+			Condition: "Wait until your turn is skipped.",
+		},
+		EscapeDesc{
+			Name:      "Dip",
+			Condition: "Wait until your turn is skipped.",
+		},
+		EscapeDesc{
+			Name:      "Skateboard Away",
+			Condition: "Wait until the deck is shuffled.",
+		},
+		EscapeDesc{
+			Name:      "My Mom's here to pick me up",
+			Condition: "Wait until your hand is worth 10 Gold.",
+		},
 	}
 )
 
+type EscapeDesc struct {
+	Name      string
+	Condition string
+}
+
 type Card struct {
-	Name        string
-	Type        CardType
-	Value       int
-	Description string
+	Name         string
+	Type         CardType
+	Value        int
+	Description  string
+	NumberInDeck int
 }
 
 type CardType int
@@ -133,26 +176,7 @@ var (
 func main() {
 	templateSize := scale * 640
 	templateImage := image.NewRGBA(image.Rect(0, 0, templateSize, templateSize))
-	cards := []Card{}
-	for _, card := range items {
-		cards = append(cards, card)
-	}
-	for i, name := range monsterNames {
-		monster := Card{
-			Type:  Monster,
-			Value: i,
-			Name:  name,
-		}
-		cards = append(cards, monster)
-	}
-	for i, name := range escapes {
-		escape := Card{
-			Type:  Escape,
-			Value: i,
-			Name:  name,
-		}
-		cards = append(cards, escape)
-	}
+	cards := generateDeck()
 	for i, card := range cards {
 		err := drawCard(card, templateImage, i)
 		if err != nil {
@@ -164,6 +188,74 @@ func main() {
 		fmt.Println(err)
 	}
 	png.Encode(file, templateImage)
+
+}
+
+var (
+	escapesPerRound      = 3
+	monstersPerRound     = 5
+	itemsPerRound        = 4
+	uselessItemsPerRound = 4
+	numRounds            = 3
+	startingCards        = 3
+	numPlayers           = 3
+)
+
+func generateDeck() []Card {
+
+	rand.Seed(time.Now().Unix())
+
+	cards := []Card{}
+
+	for i := 0; i < itemsPerRound*numRounds+(startingCards*numPlayers); i++ {
+		card := items[rand.Intn(len(items))]
+		num := card.NumberInDeck
+		if card.NumberInDeck == 0 {
+			num = 1
+		}
+		for i := 0; i < num; i++ {
+			cards = append(cards, card)
+		}
+	}
+	for i := 0; i < monstersPerRound*numRounds; i++ {
+		name := monsterNames[rand.Intn(len(monsterNames))]
+		desc := "Sacrifice any Item to defeat this monster."
+		if rand.Intn(5) >= 4 {
+			desc = "Sacrifice any non-Useless Item to defeat this monster."
+		}
+		if rand.Intn(5) >= 4 {
+			desc = "Sacrifice any 2 Items to defeat this monster."
+		}
+		monster := Card{
+			Type:        Monster,
+			Value:       i,
+			Name:        name,
+			Description: desc,
+		}
+		cards = append(cards, monster)
+	}
+	for i := 0; i < escapesPerRound*numRounds; i++ {
+		e := escapes[rand.Intn(len(escapes))]
+		escape := Card{
+			Type:        Escape,
+			Value:       i,
+			Description: e.Condition,
+			Name:        e.Name,
+		}
+		cards = append(cards, escape)
+	}
+	for i := 0; i < uselessItemsPerRound*numRounds; i++ {
+		e := uselessItems[rand.Intn(len(uselessItems))]
+		item := Card{
+			Type:        Item,
+			Value:       i,
+			Name:        e,
+			Description: "This card is useless! But it is worth some coin.",
+		}
+		cards = append(cards, item)
+	}
+
+	return cards
 
 }
 
@@ -206,11 +298,13 @@ func drawCard(card Card, templateImage *image.RGBA, i int) error {
 		return err
 	}
 
-	drawText(card.Name, robotoBold, cardImage, 10, 15, 20)
-	drawText(card.Description, robotoRegular, cardImage, 10, 50, 18)
+	leftMargin := 5
+
+	drawText(card.Name, robotoBold, cardImage, leftMargin, 10, 20)
+	drawText(card.Description, robotoRegular, cardImage, leftMargin, 40, 18)
 	valueString := fmt.Sprintf("Worth %d Gold", card.Value)
-	drawText(valueString, robotoRegular, cardImage, 10, 150, 16)
-	drawText(card.Type.String(), robotoRegular, cardImage, 10, 175, 18)
+	drawText(valueString, robotoRegular, cardImage, leftMargin, 82, 16)
+	drawText(card.Type.String(), robotoRegular, cardImage, leftMargin, 25, 18)
 
 	file, err := os.Create(cardFilename)
 	if err != nil {
