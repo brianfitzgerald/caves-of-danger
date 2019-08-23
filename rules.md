@@ -19,6 +19,10 @@
 - If you draw a Monster, you have to pay the cost of defeating it; anyone in the game can pay.
 - If you lose, everyone dies and the round is over. You
 
+## Combat
+
+- When you draw a Monster, you must fulfill the conditions on the card to kill it.
+
 # Escaping
 
 - If you draw an Escape card, you must show it to the other players. When the conditions on it are fulfilled, you can Escape on your turn, before you draw cards.
@@ -34,18 +38,5 @@
 
 - After 3 floors, the game is over.
 - Each card has a gold value on it. Whoever has the most gold at the end of the 3 rounds wins.
+- Tally up the gold values of each player's hand after every round.
 - Each player keeps their previous hands in a pile near their hand.
-
-Cards
-Reshuffle monster into deck
-Look 3 cards into the deck
-Double value of card if the player escapes
-Double value of card if the group wins the floor
-Force a player on the left or right to face a monster instead of you
-Ignore another card
-Force the next player to draw 2 cards
-Skip turn
-Shuffle the dungeon
-put the card at the top of the deck on the bottom
-or transmogrify a monster into gold
-If you defeat X monster with a plasma weapon, draw a card

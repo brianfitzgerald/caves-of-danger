@@ -36,6 +36,18 @@ var (
 			Description: "Double the value of this card if you escaped this round.",
 		},
 		Card{
+			Name:        "Midas Touch",
+			Type:        Item,
+			Value:       5,
+			Description: "Turn a monster to Gold.",
+		},
+		Card{
+			Name:        "Dreamwork",
+			Type:        Item,
+			Value:       3,
+			Description: "Double the value of this card if you stayed until the end of this round.",
+		},
+		Card{
 			Name:        "Left Bamboozle",
 			Type:        Item,
 			Value:       5,
@@ -66,14 +78,14 @@ var (
 			Description: "Take the top card on the deck and put it on the bottom.",
 		},
 		Card{
-			Name:         "Next Door Over",
+			Name:         "Zero day",
 			Type:         Item,
 			Value:        5,
 			NumberInDeck: 2,
-			Description:  "Take the top card on the deck and put it on the bottom.",
+			Description:  "Steal a card from another player. You get to choose the card.",
 		},
 		Card{
-			Name:         "Swipe",
+			Name:         "Walk Softly",
 			Type:         Item,
 			Value:        5,
 			NumberInDeck: 2,
@@ -103,12 +115,15 @@ var (
 		"Spotless Hubcaps",
 		"Tylenol",
 		"Radio Goggles",
+		"Cinnamon Stick",
+		"Incense Flume",
+		"Confusing Graph",
 		"Deodorant Jar",
 	}
 	escapes = []EscapeDesc{
 		EscapeDesc{
-			Name:      "Rope",
-			Condition: "Wait until 3 Monsters are killed this round.",
+			Name:      "Big Rope",
+			Condition: "Wait until you have killed 3 Monsters this round.",
 		},
 		EscapeDesc{
 			Name:      "Dinner Time",
@@ -120,7 +135,7 @@ var (
 		},
 		EscapeDesc{
 			Name:      "Skateboard Away",
-			Condition: "Wait until the deck is shuffled.",
+			Condition: "Wait until someone steals a card from you.",
 		},
 		EscapeDesc{
 			Name:      "My Mom's here to pick me up",
@@ -274,8 +289,24 @@ func generateDeck() []Card {
 
 	cards := []Card{}
 
+	usedItems := map[string]bool{}
+	for _, c := range items {
+		usedItems[c.Name] = false
+	}
 	for i := 0; i < itemsPerRound*numRounds+(startingCards*numPlayers); i++ {
 		card := items[rand.Intn(len(items))]
+
+		validCards := len(items)
+		for _, c := range items {
+			if usedItems[c.Name] == true {
+				validCards--
+			}
+		}
+
+		for usedItems[card.Name] == true && validCards > 0 {
+			card = items[rand.Intn(len(items))]
+		}
+		usedItems[card.Name] = true
 		num := card.NumberInDeck
 		if card.NumberInDeck == 0 {
 			num = 1
@@ -287,24 +318,31 @@ func generateDeck() []Card {
 	for i := 0; i < monstersPerRound*numRounds; i++ {
 		name := monsterNames[rand.Intn(len(monsterNames))]
 		desc := "Sacrifice any 2 Items to defeat."
+		val := rand.Intn(7) + 2
 		if rand.Intn(5) >= 4 {
 			desc = "Sacrifice any non-Useless Item to defeat."
+			val = 6
 		}
 		if rand.Intn(5) >= 4 {
 			desc = "Sacrifice 10 Gold worth of Items to defeat."
+			val = 8
 		}
 		if rand.Intn(5) >= 4 {
 			desc = "Sacrifice any 3 Items to defeat."
-		}
-		if rand.Intn(5) >= 4 {
-			desc = "Sacrifice any 3 Items to defeat."
+			val = 10
 		}
 		if rand.Intn(5) >= 4 {
 			desc = "Sacrifice a Useless Item to defeat."
+			val = 6
+		}
+		if rand.Intn(10) >= 9 {
+			name = "Rogue Genie"
+			desc = "Sacrifice 10 Gold worth of items to defeat."
+			val = 12
 		}
 		monster := Card{
 			Type:        Monster,
-			Value:       i * 2,
+			Value:       val,
 			Name:        name,
 			Description: desc,
 		}
