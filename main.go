@@ -26,68 +26,68 @@ var (
 		Card{
 			Name:        "Amulet of Sight",
 			Type:        Item,
-			Value:       3,
+			GoldValue:   3,
 			Description: "Look 3 cards into the deck.",
 		},
 		Card{
 			Name:        "Double or Nothing",
 			Type:        Item,
-			Value:       3,
+			GoldValue:   3,
 			Description: "Double the value of this card if you escaped this round.",
 		},
 		Card{
 			Name:        "Midas Touch",
 			Type:        Item,
-			Value:       5,
+			GoldValue:   5,
 			Description: "Turn a monster to Gold.",
 		},
 		Card{
 			Name:        "Dreamwork",
 			Type:        Item,
-			Value:       3,
+			GoldValue:   3,
 			Description: "Double the value of this card if you stayed until the end of this round.",
 		},
 		Card{
 			Name:        "Left Bamboozle",
 			Type:        Item,
-			Value:       5,
+			GoldValue:   5,
 			Description: "Skip your turn, the player on your left keeps this card and has to draw 2 on their turn.",
 		},
 		Card{
 			Name:        "Right Bamboozle",
 			Type:        Item,
-			Value:       4,
+			GoldValue:   4,
 			Description: "Skip your turn, the player on your right keeps this card and has to draw 2 on their turn.",
 		},
 		Card{
 			Name:        "Bliss",
 			Type:        Item,
-			Value:       6,
+			GoldValue:   6,
 			Description: "Ignore the effects of a card you drew.",
 		},
 		Card{
 			Name:        "Automated Buck Passer",
 			Type:        Item,
-			Value:       4,
+			GoldValue:   4,
 			Description: "Skip your turn.",
 		},
 		Card{
 			Name:        "Next Door Over",
 			Type:        Item,
-			Value:       5,
+			GoldValue:   5,
 			Description: "Take the top card on the deck and put it on the bottom.",
 		},
 		Card{
 			Name:         "Zero day",
 			Type:         Item,
-			Value:        5,
+			GoldValue:    5,
 			NumberInDeck: 2,
 			Description:  "Steal a card from another player. You get to choose the card.",
 		},
 		Card{
 			Name:         "Walk Softly",
 			Type:         Item,
-			Value:        5,
+			GoldValue:    5,
 			NumberInDeck: 2,
 			Description:  "Steal a card from another player. You get to choose the card.",
 		},
@@ -153,11 +153,14 @@ type EscapeDesc struct {
 }
 
 type Card struct {
-	Name         string
-	Type         CardType
-	Value        int
-	Description  string
-	NumberInDeck int
+	Name               string
+	Type               CardType
+	GoldValue          int
+	Description        string
+	NumberInDeck       int
+	MonsterCombatType  MonsterCombatType
+	MonsterCombatValue int
+	ItemIsUseless      bool
 }
 
 type CardType int
@@ -166,6 +169,14 @@ const (
 	Item CardType = iota
 	Monster
 	Escape
+)
+
+type MonsterCombatType int
+
+const (
+	SacrificeAnyItem MonsterCombatType = iota
+	SacrificeGoldAmount
+	SacrificeNonUselessItem
 )
 
 func (f CardType) String() string {
@@ -211,11 +222,16 @@ const (
 func main() {
 
 	if len(os.Args) > 1 {
-		if os.Args[1] == "deck" {
+		switch os.Args[1] {
+		case "gen":
 			testDeck()
-		}
-		if os.Args[1] == "print" {
+			break
+		case "sim":
+			SimulateRound()
+			break
+		case "print":
 			printDeck()
+			break
 		}
 	}
 
@@ -231,7 +247,7 @@ func testDeck() {
 	}
 
 	for _, card := range shuffled {
-		fmt.Println(card.Type.String(), card.Name, card.Description, card.Value)
+		fmt.Println(card.Type.String(), card.Name, card.Description, card.GoldValue)
 	}
 }
 
@@ -322,32 +338,45 @@ func generateDeck() []Card {
 		name := monsterNames[rand.Intn(len(monsterNames))]
 		desc := "Sacrifice any 2 Items to defeat."
 		val := rand.Intn(7) + 2
+		combatType := SacrificeAnyItem
+		combatValue := 2
 		if rand.Intn(5) >= 4 {
+			combatType = SacrificeNonUselessItem
 			desc = "Sacrifice any non-Useless Item to defeat."
 			val = 6
+			combatValue = 0
 		}
 		if rand.Intn(5) >= 4 {
+			combatType = SacrificeGoldAmount
 			desc = "Sacrifice 10 Gold worth of Items to defeat."
 			val = 8
+			combatValue = 10
 		}
 		if rand.Intn(5) >= 4 {
 			desc = "Sacrifice any 3 Items to defeat."
 			val = 10
+			combatValue = 3
+			combatType = SacrificeAnyItem
 		}
 		if rand.Intn(5) >= 4 {
 			desc = "Sacrifice a Useless Item to defeat."
 			val = 6
+			combatType = SacrificeNonUselessItem
 		}
 		if rand.Intn(10) >= 9 {
 			name = "Rogue Genie"
 			desc = "Sacrifice 10 Gold worth of items to defeat."
 			val = 12
+			combatValue = 10
+			combatType = SacrificeGoldAmount
 		}
 		monster := Card{
-			Type:        Monster,
-			Value:       val,
-			Name:        name,
-			Description: desc,
+			Type:               Monster,
+			GoldValue:          val,
+			Name:               name,
+			Description:        desc,
+			MonsterCombatType:  combatType,
+			MonsterCombatValue: combatValue,
 		}
 		cards = append(cards, monster)
 	}
@@ -355,7 +384,7 @@ func generateDeck() []Card {
 		e := escapes[rand.Intn(len(escapes))]
 		escape := Card{
 			Type:        Escape,
-			Value:       i,
+			GoldValue:   i,
 			Description: e.Condition,
 			Name:        e.Name,
 		}
@@ -364,10 +393,11 @@ func generateDeck() []Card {
 	for i := 0; i < uselessItemsPerRound*numRounds; i++ {
 		e := uselessItems[rand.Intn(len(uselessItems))]
 		item := Card{
-			Type:        Item,
-			Value:       i,
-			Name:        e,
-			Description: "This card is useless! But it is worth some coin.",
+			Type:          Item,
+			GoldValue:     i,
+			Name:          e,
+			ItemIsUseless: true,
+			Description:   "This card is useless! But it is worth some coin.",
 		}
 		cards = append(cards, item)
 	}
@@ -430,7 +460,7 @@ func drawCard(card Card, templateImage *image.RGBA, i int) error {
 
 	drawText(card.Name, robotoBold, cardImage, leftMargin, 10, 20, textColor)
 	drawText(card.Description, robotoRegular, cardImage, leftMargin, 40, 18, textColor)
-	valueString := fmt.Sprintf("Worth %d Gold", card.Value)
+	valueString := fmt.Sprintf("Worth %d Gold", card.GoldValue)
 	drawText(valueString, robotoRegular, cardImage, leftMargin, 82, 16, textColor)
 	drawText(card.Type.String(), robotoRegular, cardImage, leftMargin, 25, 18, textColor)
 
