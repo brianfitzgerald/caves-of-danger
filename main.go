@@ -390,6 +390,8 @@ func generateDeck() []Card {
 		}
 		cards = append(cards, escape)
 	}
+
+	// generate useless cards
 	for i := 0; i < uselessItemsPerRound*numRounds; i++ {
 		e := uselessItems[rand.Intn(len(uselessItems))]
 		item := Card{
@@ -407,6 +409,8 @@ func generateDeck() []Card {
 }
 
 func drawCard(card Card, templateImage *image.RGBA, i int) error {
+
+	// draw individual card
 	cardFilename := "exports/cards/"
 	cardFilename += strings.ReplaceAll(card.Name, " ", "_")
 	cardFilename = strings.ToLower(cardFilename)
@@ -423,18 +427,21 @@ func drawCard(card Card, templateImage *image.RGBA, i int) error {
 		bgColor = purple
 	}
 
-	textColor := color.Color(color.White)
-
-	if printType == A4 {
-		textColor = bgColor
-		bgColor = color.White
-	}
+	bodyTextColor := bgColor
+	headerTextColor := color.White
 
 	innerBounds := cardImage.Bounds()
 	innerBounds = innerBounds.Inset(2)
 
+	// draw outline
+
 	draw.Draw(cardImage, cardImage.Bounds(), &image.Uniform{color.Black}, image.ZP, draw.Src)
-	draw.Draw(cardImage, innerBounds, &image.Uniform{bgColor}, image.ZP, draw.Src)
+	draw.Draw(cardImage, innerBounds, &image.Uniform{color.White}, image.ZP, draw.Src)
+
+	headerRect := image.Rect(0, 0, cardImage.Bounds().Dx(), 240)
+	draw.Draw(cardImage, headerRect, &image.Uniform{bgColor}, image.ZP, draw.Src)
+
+	// load fonts
 
 	fontBytes, err := ioutil.ReadFile(robotoBoldSrc)
 	if err != nil {
@@ -456,19 +463,34 @@ func drawCard(card Card, templateImage *image.RGBA, i int) error {
 		return err
 	}
 
+	// draw text
+
 	leftMargin := 5
 
-	drawText(card.Name, robotoBold, cardImage, leftMargin, 10, 20, textColor)
-	drawText(card.Description, robotoRegular, cardImage, leftMargin, 40, 18, textColor)
-	valueString := fmt.Sprintf("Worth %d Gold", card.GoldValue)
-	drawText(valueString, robotoRegular, cardImage, leftMargin, 82, 16, textColor)
-	drawText(card.Type.String(), robotoRegular, cardImage, leftMargin, 25, 18, textColor)
+	drawText(card.Name, robotoBold, cardImage, leftMargin, 10, 20, headerTextColor)
+	drawText(card.Description, robotoRegular, cardImage, leftMargin, 40, 18, bodyTextColor)
+	valueString := fmt.Sprintf("%d", card.GoldValue)
+	drawText(valueString, robotoRegular, cardImage, leftMargin+40, 25, 18, headerTextColor)
+	drawText(card.Type.String(), robotoRegular, cardImage, leftMargin, 25, 18, headerTextColor)
+
+	// draw money icon
+
+	moneyIcon, _ := os.Open("resources/money_icon.png")
+	moneyIconImg, _, _ := image.Decode(moneyIcon)
+	iconBounds := moneyIconImg.Bounds()
+	iconPos := image.Pt(280, 160)
+	iconPosRect := image.Rect(iconPos.X, iconPos.Y, iconBounds.Dx()+iconPos.X, iconBounds.Dy()+iconPos.Y)
+	draw.Draw(cardImage, iconPosRect, moneyIconImg, image.Pt(0, 0), draw.Over)
+
+	// draw individual card
 
 	file, err := os.Create(cardFilename)
 	if err != nil {
 		return err
 	}
 	png.Encode(file, cardImage)
+
+	// draw card to full page template image
 
 	y := (i / cardsPerRow) * 182 * scale / 2
 	x := (i % cardsPerRow) * 126 * scale / 2
