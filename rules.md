@@ -5,7 +5,7 @@
 - Start by shuffling the deck, and drawing 10 cards from the top. This is the current floor.
 - Each player gets 1 Useless item to start.
 - Draw 3 monsters from the monster deck and add them to the floor. Shuffle the floor.
-- Go clockwise starting with the player with the cutest dog.
+- Go clockwise starting with the player with the cutest pet.
 
 ## Playing your turn
 

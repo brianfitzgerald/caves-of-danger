@@ -221,13 +221,24 @@ const (
 
 func main() {
 
+	// example commands:
+	// go run sim.go main.go gen
+	// go run sim.go main.go print A4
+
 	if len(os.Args) > 1 {
 		switch os.Args[1] {
 		case "gen":
 			testDeck()
 			break
 		case "sim":
-			SimulateRound()
+			roundsLastedResults := []int{}
+			for index := 0; index < 10000; index++ {
+				roundsLasted := SimulateRound()
+				println(roundsLasted)
+				roundsLastedResults = append(roundsLastedResults, roundsLasted)
+			}
+			fmt.Printf("avg round length: %d\n", average(roundsLastedResults))
+
 			break
 		case "print":
 			printDeck()
@@ -235,6 +246,14 @@ func main() {
 		}
 	}
 
+}
+
+func average(xs []int) float64 {
+	total := 0
+	for _, v := range xs {
+		total += v
+	}
+	return float64(total) / float64(len(xs))
 }
 
 func testDeck() {
@@ -304,8 +323,7 @@ var (
 
 func generateDeck() []Card {
 
-	rand.Seed(time.Now().Unix())
-
+	rand.Seed(time.Now().UnixNano())
 	cards := []Card{}
 
 	usedItems := map[string]bool{}
