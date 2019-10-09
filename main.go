@@ -125,43 +125,65 @@ var (
 	}
 	escapes = []EscapeDesc{
 		EscapeDesc{
-			Name:      "Big Rope",
-			Condition: "Wait until you have killed 3 Monsters this round.",
+			Name:                 "Big Rope",
+			Condition:            "Wait until you have killed 3 Monsters this round.",
+			EscapeType:           MonstersKilled,
+			EscapeConditionValue: 3,
 		},
 		EscapeDesc{
-			Name:      "Dinner Time",
-			Condition: "Wait until you have 5 cards in your hand.",
+			Name:                 "Dinner Time",
+			Condition:            "Wait until you have 10 cards in your hand.",
+			EscapeType:           CardsInHand,
+			EscapeConditionValue: 10,
 		},
 		EscapeDesc{
-			Name:      "Dip",
-			Condition: "Wait until your turn is skipped.",
+			Name:       "Dip",
+			Condition:  "Wait until your turn is skipped.",
+			EscapeType: TurnSkipped,
 		},
 		EscapeDesc{
-			Name:      "Skateboard Away",
-			Condition: "Wait until someone steals a card from you.",
+			Name:       "Skateboard Away",
+			Condition:  "Wait until someone steals a card from you.",
+			EscapeType: CardStolen,
 		},
 		EscapeDesc{
-			Name:      "My Mom's here to pick me up",
-			Condition: "Wait until your hand is worth 10 Gold.",
+			Name:                 "My Mom's here to pick me up",
+			Condition:            "Wait until your hand is worth 15 Gold.",
+			EscapeType:           HandWorthGold,
+			EscapeConditionValue: 15,
 		},
 	}
 )
 
 type EscapeDesc struct {
-	Name      string
-	Condition string
+	Name                 string
+	Condition            string
+	EscapeConditionValue int
+	EscapeType           EscapeType
 }
 
 type Card struct {
-	Name               string
-	Type               CardType
-	GoldValue          int
-	Description        string
-	NumberInDeck       int
-	MonsterCombatType  MonsterCombatType
-	MonsterCombatValue int
-	ItemIsUseless      bool
+	Name                 string
+	Type                 CardType
+	GoldValue            int
+	Description          string
+	NumberInDeck         int
+	MonsterCombatType    MonsterCombatType
+	MonsterCombatValue   int
+	EscapeType           EscapeType
+	ItemIsUseless        bool
+	EscapeConditionValue int
 }
+
+type EscapeType int
+
+const (
+	MonstersKilled EscapeType = iota
+	CardsInHand
+	TurnSkipped
+	CardStolen
+	HandWorthGold
+)
 
 type CardType int
 
@@ -232,9 +254,8 @@ func main() {
 			break
 		case "sim":
 			roundsLastedResults := []int{}
-			for index := 0; index < 10000; index++ {
+			for index := 0; index < 100000; index++ {
 				roundsLasted := SimulateRound()
-				println(roundsLasted)
 				roundsLastedResults = append(roundsLastedResults, roundsLasted)
 			}
 			fmt.Printf("avg round length: %d\n", average(roundsLastedResults))
@@ -401,10 +422,12 @@ func generateDeck() []Card {
 	for i := 0; i < escapesPerRound*numRounds; i++ {
 		e := escapes[rand.Intn(len(escapes))]
 		escape := Card{
-			Type:        Escape,
-			GoldValue:   i,
-			Description: e.Condition,
-			Name:        e.Name,
+			Type:                 Escape,
+			EscapeConditionValue: e.EscapeConditionValue,
+			EscapeType:           e.EscapeType,
+			GoldValue:            i,
+			Description:          e.Condition,
+			Name:                 e.Name,
 		}
 		cards = append(cards, escape)
 	}
